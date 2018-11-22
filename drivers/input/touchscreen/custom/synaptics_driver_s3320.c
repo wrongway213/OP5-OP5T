@@ -25,6 +25,7 @@
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
 #include <linux/hrtimer.h>
+#include <linux/pm_qos.h>
 #include <linux/proc_fs.h>
 #include <linux/interrupt.h>
 #include <linux/regulator/consumer.h>
@@ -525,6 +526,7 @@ struct synaptics_ts_data {
 #ifdef SUPPORT_VIRTUAL_KEY
 	struct kobject *properties_kobj;
 #endif
+    struct pm_qos_request pm_qos_req;
 };
 
 static struct device_attribute attrs_oem[] = {
@@ -747,6 +749,10 @@ static int synaptics_read_register_map(struct synaptics_ts_data *ts)
 	F54_ANALOG_QUERY_BASE, F54_ANALOG_COMMAND_BASE,
 	F54_ANALOG_CONTROL_BASE, F54_ANALOG_DATA_BASE);
 #endif
+
+    /* prevent CPU from entering deep sleep */
+	pm_qos_update_request(&ts->pm_qos_req, 100);
+
 	ret = synaptics_rmi4_i2c_write_byte(ts->client, 0xff, 0x00);
 	return 0;
 }
@@ -1708,6 +1714,8 @@ static void synaptics_ts_work_func(struct work_struct *work)
 
 
 END:
+    pm_qos_update_request(&ts->pm_qos_req, PM_QOS_DEFAULT_VALUE);
+
 	//ret = set_changer_bit(ts);
 	touch_enable(ts);
 	return;
@@ -4867,6 +4875,8 @@ static int synaptics_ts_probe(struct i2c_client *client,
 #ifdef SUPPORT_VIRTUAL_KEY
 	synaptics_ts_init_virtual_key(ts);
 #endif
+    pm_qos_add_request(&ts->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
+		PM_QOS_DEFAULT_VALUE);
 	init_synaptics_proc(ts);
 	TPDTM_DMESG("synaptics_ts_probe 3203: normal end\n");
 	return 0;
@@ -4916,6 +4926,7 @@ static int synaptics_ts_remove(struct i2c_client *client)
 	input_free_device(ts->input_dev);
 	kfree(ts);
 	tpd_power(ts, 0);
+    pm_qos_remove_request(&ts->pm_qos_req);
 	return 0;
 }
 
