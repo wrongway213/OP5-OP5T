@@ -5,7 +5,6 @@ obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o freq_table.o cpufreq_governor_attr_set.o
 obj-$(CONFIG_CPU_FREQ_STAT)             += cpufreq_stats.o
 
 # CPUfreq governors 
-obj-$(CONFIG_CPU_FREQ_GOV_PERFORMANCE)	+= cpufreq_performance.o
 obj-$(CONFIG_CPU_FREQ_GOV_COMMON)		+= cpufreq_governor.o
 
 # CPU Input Boost
